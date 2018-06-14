@@ -27,7 +27,7 @@ def arco(x, y, radius):
         angle = np.rad2deg(np.arctan((y[i] - y[i+1])/(x[i] - x[i+1])))
 
         heigth = length(end, begin)
-        new_cylinder = multmatrix(m=rotation(90,'y'))(cylinder(h=heigth, r=radius))
+        new_cylinder = multmatrix(m=rotation(90, 'y'))(cylinder(h=heigth, r=radius))
         new_cylinder = multmatrix(m=rotation(angle, 'z'))(new_cylinder)
         new_cylinder = translate(list(begin))(new_cylinder)
         arco_sum.add(new_cylinder)
@@ -36,11 +36,12 @@ def arco(x, y, radius):
 
 def struct_spider(height, radius_square_low, radius_square_top):
     """
-    Create structure for MST and SST camera with one mirror
+    Create structure for MST and SST camera with one mirror (FOR THE MOMENT).
     :param height: height between mirror plane and camera plane
     :param radius_square_low: radius in the lower part (mirror plane)
     :param radius_square_top: radius in the upper part (camera plane)
     :return: 4 spider and camera structure
+    TODO: how to create 2-mirror telescope structure?
     """
     structure = union()
     sides = 4
@@ -58,20 +59,21 @@ def struct_spider(height, radius_square_low, radius_square_top):
     structure = multmatrix(m=rotation(45, 'z'))(structure)
     return structure
 
-def mirror_plane_creator(type, radius):
+
+def mirror_plane_creator(tel_type, radius):
     """
     Create a fake mirror plane and hole at center
-    :param type: select mirror plane type: 'LST', 'MST'
+    :param tel_type: select mirror plane type: 'LST', 'MST'
     :param radius: radius of the mirror plane. (e.g.: LST is 11,50 m == 23/2 m)
     :return: mirror_plane with
     """
-    if type=='LST':
+    if tel_type == 'LST':
         mirror_plane = difference()
         mirror_plane.add(color([1, 0, 0])(sphere(radius)))
         mirror_plane.add(translate([0, 0, 1.6 * radius])(color([0, 0, 1, 0.7])(sphere(radius * 2))))
         cal_box = color([1, 0, 0])(translate([0, 0, -radius])(cylinder(r=radius/6, h=radius*2)))
         mirror_plane.add(cal_box)
-    elif type=='MST':
+    elif tel_type == 'MST':
         # first create a big sphere (to have a big curvature radius), then cut a hole for the calbox
         spheres = difference()
         spheres.add(color([1, 0, 0])(sphere(3*radius)))
@@ -82,19 +84,19 @@ def mirror_plane_creator(type, radius):
         # then select only one part of the full sphere
         mirror_plane = intersection()
         mirror_plane.add(spheres)
-        sel_region = translate([0, 0, -3*radius])(cylinder(r=radius, h = radius))
+        sel_region = translate([0, 0, -3*radius])(cylinder(r=radius, h=radius))
         mirror_plane.add(sel_region)
 
-        # finally translate everygthing at zero
+        # finally translate everything at zero
         mirror_plane = translate([0, 0, 3*radius])(mirror_plane)
     return mirror_plane
 
 
-def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_camera=False, ref_tel=False):
+def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_camera=False, ref_tel=False):
     """
     Create telescope. Implemented only 'LST' by now. Everything is somehow in centimeters.
     :param tel_name: string for telescope type. 'LST', 'MST', ecc.
-    :param camera_display: input from camera_event.py loaded another event
+    :param camera_display_bool: input from camera_event.py loaded another event
     :param pointing: dictionary for pointing directions in degrees above horizon, {'alt': val, 'az': val}
     :param origin: (x, y, z) position of the telescope
     :param tel_num: (int) Telescope ID to be plotted with the telescope
@@ -104,11 +106,21 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
 
     TODO: create real substructure for telescope?
     """
+
+    # unpack camera_display values
+    bool_trig = camera_display_bool[1]
+    if bool_trig:
+        color_trig = [1, 0, 0]
+    else:
+        color_trig = [0, 1, 0]
+
+    camera_display = camera_display_bool[0]
+
     telescope_struct = union()
 
     if tel_name == 'LST':
         # create mirror plane
-        mirror_plane = mirror_plane_creator(type= tel_name, radius=1150)
+        mirror_plane = mirror_plane_creator(tel_type=tel_name, radius=1150)
 
         # define arch
         arch = union()
@@ -137,12 +149,11 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
         telescope_struct = translate([0, 0, 450])(telescope_struct)
         telescope_struct = multmatrix(m=rotation(-90, 'z'))(telescope_struct)
 
-
     elif tel_name == 'MST':
         radius = 600
         height = 1800
         ratio_cam = 2
-        mirror_plane = mirror_plane_creator(type=tel_name, radius=radius)
+        mirror_plane = mirror_plane_creator(tel_type=tel_name, radius=radius)
         telescope_struct.add(mirror_plane)
 
         # add the long spiders to the structure
@@ -182,10 +193,9 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
 
     # ADD TELESCOPE ID
     print(tel_num, tel_name)
-    tel_number = color([1, 0, 0])(text(text=str(tel_num), size=10000, spacing=0.1))
-    telescope_struct = telescope_struct + translate((500, 500, -600))(linear_extrude(100)(tel_number))
-
+    tel_number = color(color_trig)(linear_extrude(100)(text(text=str(tel_num), size=10000, spacing=0.1)))
     telescope_struct = translate(list(origin))(telescope_struct)
+    telescope_struct = telescope_struct + translate((origin[0]+700, origin[1]+700, 0))(tel_number)
 
 
     return telescope_struct

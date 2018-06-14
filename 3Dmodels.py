@@ -55,6 +55,11 @@ def load_calibrate():
 def telescope_camera_event(event):
     """
     Plot telescope + camera + event on it (if needed). Loop over all the telescopes with data in an event.
+    The function create:
+        - camera display with event visualization and arrows
+        - telescope frame
+        - position every telescope on its right position on ground
+
     :param event: event selected from simtel file
     :return: return
     """
@@ -64,6 +69,8 @@ def telescope_camera_event(event):
 
     x_tel_trig = sub_arr_trig['tel_pos_x'].to('cm').value
     y_tel_trig = sub_arr_trig['tel_pos_y'].to('cm').value
+    z_tel_trig = sub_arr_trig['tel_pos_z'].to('cm').value
+
     label_tel = sub_arr_trig['tel_id']
     tel_names = sub_arr_trig['tel_type']
 
@@ -71,17 +78,17 @@ def telescope_camera_event(event):
 
     array = union()
     index = 0
-    for id in itel:
-        if subinfo.tel[id].camera.cam_id == 'FlashCam':
+    for tel_id in itel:
+        if subinfo.tel[tel_id].camera.cam_id == 'FlashCam':
             # TODO: find a better way to select the telescopes without this stupid index
             index += 1
             continue
         print('-------------------------')
-        print("tel_id processed: ", id)
+        print("tel_id processed: ", tel_id)
         tel_name = tel_names[index]
-        camera_display = draw_camera(event=event, itel=id, subarray=subinfo, scale_cam=1.6, flip=True, tail_cut_bool=True)  #, ref_axis=True)
-        origin = (x_tel_trig[index], y_tel_trig[index], 600)
-        tel_struct = telescope(tel_name=tel_name, camera_display=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False)
+        camera_display = draw_camera(event=event, itel=tel_id, subarray=subinfo, scale_cam=1.6, flip=True, tail_cut_bool=True)  #, ref_axis=True)
+        origin = (x_tel_trig[index], y_tel_trig[index], z_tel_trig[index])
+        tel_struct = telescope(tel_name=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False)
 
         array.add(tel_struct)
         index += 1
@@ -89,6 +96,17 @@ def telescope_camera_event(event):
 
 
 def main():
+    """
+    Main function to
+    - load and calibrate the event from simtel file
+    - pass the selected event to create array:
+        - camera + event
+        - telescope structure
+        - tel id (w/o data_after_cleaning: Red (Y) or Green (N))
+    - add MC cross on ground
+    - add ground ref frame
+    :return: the full array
+    """
     # select LST telescope with ID=5.
     # event, itel, subinfo = load_calibrate(2)
     event = load_calibrate()

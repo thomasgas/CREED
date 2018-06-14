@@ -42,12 +42,13 @@ def circle_trans(center, radius, height):
     :return: the translated circle
     """
     (center_x, center_y) = center
-    return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=6))
+    return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=8))
 
 
-def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_bool=False):  # ,ref_axis=True):
+def draw_camera(event, itel, subarray, scale_cam=1.0, flip=False, tail_cut_bool=False):  # ,ref_axis=True):
     """
     Draw camera, either with or without an event. Take info from a simtel file.
+    Make camera a list with the second element a boolean which knows if the camera has data after the cleaning.
     :param event: event selected from simtel file.
     :param itel: telescope ID from simtel file. Select only LST IDs for the moment
     :param subarray: subarray info from the simtel file. Needed for the description of the instrument
@@ -63,27 +64,28 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_boo
         cam_height = 200
     elif camera.cam_id == 'NectarCam' or camera.cam_id == 'FlashCam':
         cam_height = 120
-
     print('plotting camera: ', camera.cam_id)
 
     x_pix_pos = 100 * camera.pix_x.value
     y_pix_pos = 100 * camera.pix_y.value
-
     side = 1.05*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
 
     if flip:
-
         x_pix_pos, y_pix_pos = y_pix_pos, x_pix_pos
+
+    data_after_cleaning = False
 
     if tail_cut_bool:
         # Perform tailcut cleaning on image
-
         pic_th = tail_cut[camera.cam_id][1]
         bound_th = tail_cut[camera.cam_id][1]
         image_cal = event.dl1.tel[itel].image[0]
         max_col = np.max(image_cal)
         mask_tail = tailcuts_clean(camera, image_cal, picture_thresh=pic_th, boundary_thresh=bound_th,
                                    min_number_picture_neighbors=1)
+
+        # set boolean for trigger display on ground
+        data_after_cleaning = np.sum(mask_tail) == 0
 
         for i in range(x_pix_pos.size):
             # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
@@ -101,4 +103,6 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_boo
     # if ref_axis:
     #    camera_display.add(ref_arrow_3d(point_ref_frame['scale'] * 10, point_ref_frame['origin']))
 
-    return camera_display
+    # return also the boolean for the cleaned image
+    camera_display_arr = [camera_display, data_after_cleaning]
+    return camera_display_arr
