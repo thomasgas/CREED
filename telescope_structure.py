@@ -56,11 +56,6 @@ def struct_spider(height, radius_square_low, radius_square_top):
         structure = multmatrix(m=rotation(delta_angles, 'z'))(structure)
         structure.add(spider)
     structure = multmatrix(m=rotation(45, 'z'))(structure)
-    side_cam = 2*radius_square_top/np.sqrt(2)
-    camera_frame = translate([0, 0, 110])(cube([side_cam, side_cam, 100], center=True))
-    camera_frame = translate([0, 0, height-30])(camera_frame)
-    structure = structure + camera_frame
-
     return structure
 
 def mirror_plane_creator(type, radius):
@@ -117,7 +112,7 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
 
         # define arch
         arch = union()
-        x_arco = np.linspace(-2200/2, 2200/2, 100)
+        x_arco = np.linspace(-2200/2, 2200/2, 50)
         y_arco = 4/2300*x_arco**2
         arch_struct = color([1, 0, 0])(arco(x_arco, y_arco, 30))
         arch.add(arch_struct)
@@ -145,9 +140,37 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
 
     elif tel_name == 'MST':
         radius = 600
+        height = 1800
+        ratio_cam = 2
         mirror_plane = mirror_plane_creator(type=tel_name, radius=radius)
         telescope_struct.add(mirror_plane)
-        structure = struct_spider(1800, radius, radius/2.5)
+
+        # add the long spiders to the structure
+        structure = struct_spider(height, radius, radius/ratio_cam)
+
+        # create camera structure with ref arrow and overplot the event
+        side_cam = 2 * (radius/ratio_cam) / np.sqrt(2)
+        camera_frame = cube([side_cam, side_cam, 100], center=True)
+
+        camera_display = multmatrix(m=rotation(-90, 'z'))(camera_display)
+        camera_display = translate([0, 0, -60])(camera_display)
+        camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
+        camera_frame = camera_frame + camera_display
+
+        # check for arrows in reference frame
+        if ref_camera:
+            camera_frame = camera_frame + ref_arrow_2d(400, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0), inverted=True)
+
+        # rotate camera in order to have x and y in the correct position (y pointing up and x pointing right)
+        camera_frame = multmatrix(m=rotation(-90, 'z'))(camera_frame)
+        # raise to same level as mirror plane
+        camera_frame = translate([0, 0, 110])(camera_frame)
+
+        # raise to top of telescope - some in order to look nicer
+        camera_frame = translate([0, 0, height - 30])(camera_frame)
+        structure = structure + camera_frame
+
+        # add structure, camera frame and camera on the telescope structure
         telescope_struct.add(structure)
         telescope_struct = translate([0, 0, -150])(telescope_struct)
 
@@ -158,7 +181,7 @@ def telescope(tel_name, camera_display, pointing, origin, tel_num = '0', ref_cam
     telescope_struct = multmatrix(m=rotation(-az, 'z'))(telescope_struct)
 
     # ADD TELESCOPE ID
-    print(tel_num)
+    print(tel_num, tel_name)
     tel_number = color([1, 0, 0])(text(text=str(tel_num), size=10000, spacing=0.1))
     telescope_struct = telescope_struct + translate((500, 500, -600))(linear_extrude(100)(tel_number))
 

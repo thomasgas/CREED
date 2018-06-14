@@ -33,15 +33,16 @@ def hexagon(center, radius, sides):
     return polygon(points)
 
 
-def circle_trans(center, radius):
+def circle_trans(center, radius, height):
     """
     Draw translated circle at *center* and with *radius*
     :param center: tuple (x,y) for the center
-    :param radius:
+    :param radius: radius of pixel element
+    :param height: height of camera to be plotted
     :return: the translated circle
     """
     (center_x, center_y) = center
-    return translate([center_x, center_y])(cylinder(r=radius, h=200,  segments=10))
+    return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=6))
 
 
 def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_bool=False):  # ,ref_axis=True):
@@ -50,19 +51,28 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_boo
     :param event: event selected from simtel file.
     :param itel: telescope ID from simtel file. Select only LST IDs for the moment
     :param subarray: subarray info from the simtel file. Needed for the description of the instrument
-    :param scale: scale the whole camera to see it better
+    :param scale_cam: scale the whole camera to see it better
+    :param flip: boolean parameter to select wether to flip or not x and y axis
     :param tail_cut_bool: (bool) decide whether to perform the tailcut
     :return: return camera object to plot on a telescope object
     """
     camera_display = union()
 
     camera = subarray.tel[itel].camera
+    if camera.cam_id == 'LSTCam':
+        cam_height = 200
+    elif camera.cam_id == 'NectarCam' or camera.cam_id == 'FlashCam':
+        cam_height = 120
+
+    print('plotting camera: ', camera.cam_id)
+
     x_pix_pos = 100 * camera.pix_x.value
     y_pix_pos = 100 * camera.pix_y.value
 
     side = 1.05*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
 
     if flip:
+
         x_pix_pos, y_pix_pos = y_pix_pos, x_pix_pos
 
     if tail_cut_bool:
@@ -79,16 +89,15 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_boo
             # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
             colore = list(cmap(image_cal[i] * mask_tail[i] / max_col))
             center = (x_pix_pos[i]*scale_cam, y_pix_pos[i]*scale_cam)
-            camera_display.add(color(colore)(circle_trans(center, side*scale_cam)))
+            camera_display.add(color(colore)(circle_trans(center=center, radius=side*scale_cam, height=cam_height)))
     else:
         for i in range(x_pix_pos.size):
             # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
             colore = [0, 0, 1]
             center = (x_pix_pos[i]*scale_cam, y_pix_pos[i]*scale_cam)
-            camera_display.add(color(colore)(circle_trans(center, side*scale_cam)))
+            camera_display.add(color(colore)(circle_trans(center=center, radius=side*scale_cam, height=cam_height)))
 
     # point_ref_frame = {'scale': side, 'origin': (np.max(x_pix_pos), np.max(y_pix_pos),0)}
-
     # if ref_axis:
     #    camera_display.add(ref_arrow_3d(point_ref_frame['scale'] * 10, point_ref_frame['origin']))
 
