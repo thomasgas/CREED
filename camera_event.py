@@ -44,7 +44,7 @@ def circle_trans(center, radius):
     return translate([center_x, center_y])(cylinder(r=radius, h=200,  segments=10))
 
 
-def draw_camera(event, itel, subarray, scale_cam = 1.0, tail_cut_bool=False):  # ,ref_axis=True):
+def draw_camera(event, itel, subarray, scale_cam = 1.0, flip=False, tail_cut_bool=False):  # ,ref_axis=True):
     """
     Draw camera, either with or without an event. Take info from a simtel file.
     :param event: event selected from simtel file.
@@ -62,6 +62,9 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, tail_cut_bool=False):  #
 
     side = 1.05*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
 
+    if flip:
+        x_pix_pos, y_pix_pos = y_pix_pos, x_pix_pos
+
     if tail_cut_bool:
         # Perform tailcut cleaning on image
 
@@ -71,6 +74,7 @@ def draw_camera(event, itel, subarray, scale_cam = 1.0, tail_cut_bool=False):  #
         max_col = np.max(image_cal)
         mask_tail = tailcuts_clean(camera, image_cal, picture_thresh=pic_th, boundary_thresh=bound_th,
                                    min_number_picture_neighbors=1)
+
         for i in range(x_pix_pos.size):
             # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
             colore = list(cmap(image_cal[i] * mask_tail[i] / max_col))
