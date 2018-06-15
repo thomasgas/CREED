@@ -73,20 +73,22 @@ def ref_arrow_3d(arr_length, origin, label, ref_rotation=(0, 0, 0)):
     ref_frame = rotate(list(ref_rotation))(ref_frame)
     return ref_frame
 
+
 def ref_arrow_2d(length, origin, label, ref_rotation=(0, 0), inverted = False):
     """
     Create 3-axis ref frame, with color for x,y
     :param length: length of arrox
+    :param origin: set origin of arrows. (x, y)
     :param ref_rotation: tuple for rotation
     :return:
     """
     ref_frame = union()
     if inverted:
         ref_frame.add(color([1, 0, 0])(arrow(heigth=length, tail=origin, label=label['x'], rotation=(-90, 180, 0))))  # x_axis
-        ref_frame.add(color([0, 1, 0])(multmatrix(m=rotation(90,'x'))(arrow(heigth=length, tail=origin, label=label['y'], rotation=(0, 90, 0)))))  # y_axis
+        ref_frame.add(color([0, 1, 0])(multmatrix(m=rotation(90, 'x'))(arrow(heigth=length, tail=origin, label=label['y'], rotation=(0, 90, 0)))))  # y_axis
         ref_frame = rotate(list(ref_rotation))(ref_frame)
     else:
-        ref_frame.add(color([1, 0, 0])(arrow(heigth=length, tail=origin, label=label['x'], rotation=(0, 90, 0))))   # x_axis
+        ref_frame.add(color([1, 0, 0])(multmatrix(m=rotation(-90, 'x'))(arrow(heigth=length, tail=origin, label=label['x'], rotation=(0, 90, 0)))))   # x_axis
         ref_frame.add(color([0, 1, 0])(arrow(heigth=length, tail=origin, label=label['y'], rotation=(-90, 0, 0))))  # y_axis
         ref_frame = rotate(list(ref_rotation))(ref_frame)
     return ref_frame

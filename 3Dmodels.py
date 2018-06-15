@@ -78,6 +78,7 @@ def telescope_camera_event(event):
 
     array = union()
     index = 0
+    itel = [7]
     for tel_id in itel:
         if subinfo.tel[tel_id].camera.cam_id == 'FlashCam':
             # TODO: find a better way to select the telescopes without this stupid index
@@ -86,9 +87,9 @@ def telescope_camera_event(event):
         print('-------------------------')
         print("tel_id processed: ", tel_id)
         tel_name = tel_names[index]
-        camera_display = draw_camera(event=event, itel=tel_id, subarray=subinfo, scale_cam=1.6, flip=True, tail_cut_bool=True)  #, ref_axis=True)
+        camera_display = draw_camera(event=event, itel=tel_id, subarray=subinfo, scale_cam=1.6, tail_cut_bool=True)  #, ref_axis=True)
         origin = (x_tel_trig[index], y_tel_trig[index], z_tel_trig[index])
-        tel_struct = telescope(tel_name=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False)
+        tel_struct = telescope(tel_name=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False, sim_to_real = True)
 
         array.add(tel_struct)
         index += 1

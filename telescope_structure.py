@@ -92,29 +92,30 @@ def mirror_plane_creator(tel_type, radius):
     return mirror_plane
 
 
-def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_camera=False, ref_tel=False):
+def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_camera=True, ref_tel=False, sim_to_real=False):
     """
     Create telescope. Implemented only 'LST' by now. Everything is somehow in centimeters.
     :param tel_name: string for telescope type. 'LST', 'MST', ecc.
-    :param camera_display_bool: input from camera_event.py loaded another event
+    :param camera_display_bool: input from camera_event.py loaded another event.
     :param pointing: dictionary for pointing directions in degrees above horizon, {'alt': val, 'az': val}
     :param origin: (x, y, z) position of the telescope
     :param tel_num: (int) Telescope ID to be plotted with the telescope
     :param ref_camera: (bool) create ref frame on camera
     :param ref_tel: (bool) create ref frame at the center of the telescope...TODO: needed?
+    :param sim_to_real: (bool) WITHOUT THIS THE CAMERA IS IN CTAPIPE VISUALIZATION != REAL WORLD
     :return: geometry for the telescope.
 
     TODO: create real substructure for telescope?
     """
 
     # unpack camera_display values
+    camera_display = camera_display_bool[0]
     bool_trig = camera_display_bool[1]
+
     if bool_trig:
         color_trig = [1, 0, 0]
     else:
         color_trig = [0, 1, 0]
-
-    camera_display = camera_display_bool[0]
 
     telescope_struct = union()
 
@@ -127,27 +128,35 @@ def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_
         x_arco = np.linspace(-2200/2, 2200/2, 50)
         y_arco = 4/2300*x_arco**2
         arch_struct = color([1, 0, 0])(arco(x_arco, y_arco, 30))
+        arch_struct = multmatrix(m=rotation(-90, 'y'))(arch_struct)
+        arch_struct = multmatrix(m=rotation(-90, 'x'))(arch_struct)
         arch.add(arch_struct)
-        arch = multmatrix(m=rotation(-90, 'x'))(arch)
+
         arch = translate([0, 0, np.max(y_arco) - 200])(arch)
+        #arch = multmatrix(m=rotation(180, 'z'))(arch)
 
         # append camera to arch
+
         cam_struct = cube([400, 400, 190], center=True)
-        camera_display = multmatrix(m=rotation(-90, 'z'))(camera_display)
-        camera_display = translate([0, 0, -100])(camera_display)
-        camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
-        cam_struct = cam_struct + camera_display
+
+        if sim_to_real:
+            camera_display = multmatrix(m=rotation(90, 'z'))(camera_display)
+            camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
 
         # check for arrows in reference frame
+        cam_struct = cam_struct + camera_display
+
         if ref_camera:
-            cam_struct = cam_struct + ref_arrow_2d(500, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0), inverted=True)
+            arrow_camera = ref_arrow_2d(500, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0))
+            arrow_camera = multmatrix(m=rotation(180, 'x'))(arrow_camera)
+            cam_struct = cam_struct + arrow_camera
+
         arch.add(cam_struct)
 
         # put together arch and mirror plane
         telescope_struct.add(arch)
         telescope_struct.add(mirror_plane)
         telescope_struct = translate([0, 0, 450])(telescope_struct)
-        telescope_struct = multmatrix(m=rotation(-90, 'z'))(telescope_struct)
 
     elif tel_name == 'MST':
         radius = 600

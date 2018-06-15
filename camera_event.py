@@ -2,7 +2,9 @@ from solid.utils import translate, union
 from solid.utils import color, polygon, circle, cylinder
 from ctapipe.image import tailcuts_clean
 import numpy as np
+from solid.utils import multmatrix
 
+from utilities import ref_arrow_2d, rotation
 
 import matplotlib.pyplot as plt
 
@@ -45,7 +47,7 @@ def circle_trans(center, radius, height):
     return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=8))
 
 
-def draw_camera(event, itel, subarray, scale_cam=1.0, flip=False, tail_cut_bool=False):  # ,ref_axis=True):
+def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,ref_axis=True):
     """
     Draw camera, either with or without an event. Take info from a simtel file.
     Make camera a list with the second element a boolean which knows if the camera has data after the cleaning.
@@ -53,7 +55,6 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, flip=False, tail_cut_bool=
     :param itel: telescope ID from simtel file. Select only LST IDs for the moment
     :param subarray: subarray info from the simtel file. Needed for the description of the instrument
     :param scale_cam: scale the whole camera to see it better
-    :param flip: boolean parameter to select wether to flip or not x and y axis
     :param tail_cut_bool: (bool) decide whether to perform the tailcut
     :return: return camera object to plot on a telescope object
     """
@@ -69,9 +70,6 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, flip=False, tail_cut_bool=
     x_pix_pos = 100 * camera.pix_x.value
     y_pix_pos = 100 * camera.pix_y.value
     side = 1.05*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
-
-    if flip:
-        x_pix_pos, y_pix_pos = y_pix_pos, x_pix_pos
 
     data_after_cleaning = False
 
@@ -99,9 +97,9 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, flip=False, tail_cut_bool=
             center = (x_pix_pos[i]*scale_cam, y_pix_pos[i]*scale_cam)
             camera_display.add(color(colore)(circle_trans(center=center, radius=side*scale_cam, height=cam_height)))
 
-    # point_ref_frame = {'scale': side, 'origin': (np.max(x_pix_pos), np.max(y_pix_pos),0)}
-    # if ref_axis:
-    #    camera_display.add(ref_arrow_3d(point_ref_frame['scale'] * 10, point_ref_frame['origin']))
+    camera_display = camera_display.add(translate([0, 0, cam_height/2])(ref_arrow_2d(400, label={'x': "x_sim", 'y': "y_sim"}, origin=(0, 0))))
+    camera_display = multmatrix(m=rotation(180, 'y'))(camera_display)
+    camera_display = translate([0, 0, cam_height/2])(camera_display)
 
     # return also the boolean for the cleaned image
     camera_display_arr = [camera_display, data_after_cleaning]
