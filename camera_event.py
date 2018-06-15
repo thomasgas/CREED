@@ -8,7 +8,7 @@ from utilities import ref_arrow_2d, rotation
 
 import matplotlib.pyplot as plt
 
-cmap = plt.get_cmap("jet")
+cmap = plt.get_cmap("viridis")
 
 tail_cut = {"LSTCam": (8, 16),
             "NectarCam": (7, 14),
@@ -75,12 +75,13 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,
 
     if tail_cut_bool:
         # Perform tailcut cleaning on image
-        pic_th = tail_cut[camera.cam_id][1]
+        pic_th = tail_cut[camera.cam_id][0]
         bound_th = tail_cut[camera.cam_id][1]
         image_cal = event.dl1.tel[itel].image[0]
-        max_col = np.max(image_cal)
         mask_tail = tailcuts_clean(camera, image_cal, picture_thresh=pic_th, boundary_thresh=bound_th,
                                    min_number_picture_neighbors=1)
+
+        max_col = np.max(image_cal*mask_tail)
 
         # set boolean for trigger display on ground
         data_after_cleaning = np.sum(mask_tail) == 0
