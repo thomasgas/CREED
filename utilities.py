@@ -1,7 +1,36 @@
 import numpy as np
-from solid.utils import translate, rotate, union
-from solid.utils import cylinder, color, text, multmatrix
+from solid.utils import translate, rotate, union, forward, right, up
+from solid.utils import cylinder, color, text, multmatrix, cube
 
+
+def grid_plane(grid_unit=12, count=10, line_weight=0.1, plane='xz'):
+
+    # Draws a grid of thin lines in the specified plane.  Helpful for
+    # reference during debugging.
+    l = count * grid_unit
+    t = union()
+    t.set_modifier('background')
+    for i in range(-count // 2, count // 2 + 1):
+        if 'xz' in plane:
+            # xz-plane
+            h = up(i * grid_unit)(cube([l, line_weight, line_weight], center=True))
+            v = right(i * grid_unit)(cube([line_weight, line_weight, l], center=True))
+            t.add([h, v])
+
+        # xy plane
+        if 'xy' in plane:
+            h = forward(i * grid_unit)(cube([l, line_weight, line_weight], center=True))
+            v = right(i * grid_unit)(cube([line_weight, l, line_weight], center=True))
+            t.add([h, v])
+
+        # yz plane
+        if 'yz' in plane:
+            h = up(i * grid_unit)(cube([line_weight, l, line_weight], center=True))
+            v = forward(i * grid_unit)(cube([line_weight, line_weight, l], center=True))
+
+            t.add([h, v])
+
+    return t
 
 def rotation(angle, axis):
     """
