@@ -5,6 +5,7 @@ from utilities import ref_arrow_2d
 from utilities import length
 from utilities import rotation
 import numpy as np
+import sys
 
 import astropy.units as u
 
@@ -92,10 +93,10 @@ def mirror_plane_creator(tel_type, radius):
     return mirror_plane
 
 
-def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_camera=True, ref_tel=False, sim_to_real=False):
+def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0', ref_camera=True, ref_tel=False, sim_to_real=False):
     """
     Create telescope. Implemented only 'LST' by now. Everything is somehow in centimeters.
-    :param tel_name: string for telescope type. 'LST', 'MST', ecc.
+    :param tel_description: string for telescope type. 'LST', 'MST', ecc.
     :param camera_display_bool: input from camera_event.py loaded another event.
     :param pointing: dictionary for pointing directions in degrees above horizon, {'alt': val, 'az': val}
     :param origin: (x, y, z) position of the telescope
@@ -108,6 +109,9 @@ def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_
     TODO: create real substructure for telescope?
     """
 
+    DC_list = ['LSTCam', 'FlashCam', 'NectarCam', 'DigiCam']
+    SC_list = ['SCTCam', 'ASTRICam', 'CHEC']
+
     # unpack camera_display values
     camera_display = camera_display_bool[0]
     bool_trig = camera_display_bool[1]
@@ -119,80 +123,95 @@ def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_
 
     telescope_struct = union()
 
-    if tel_name == 'LST':
-        # create mirror plane
-        mirror_plane = mirror_plane_creator(tel_type=tel_name, radius=1150)
+    tel_type = tel_description.split(':')[0]
+    camera_name = tel_description.split(':')[1]
 
-        # define arch
-        arch = union()
-        x_arco = np.linspace(-2200/2, 2200/2, 50)
-        y_arco = 4/2300*x_arco**2
-        arch_struct = color([1, 0, 0])(arco(x_arco, y_arco, 30))
-        arch_struct = multmatrix(m=rotation(-90, 'y'))(arch_struct)
-        arch_struct = multmatrix(m=rotation(-90, 'x'))(arch_struct)
-        arch.add(arch_struct)
+    if camera_name in DC_list:
+        if tel_type == 'LST':
+            # create mirror plane
+            mirror_plane = mirror_plane_creator(tel_type=tel_type, radius=1150)
 
-        arch = translate([0, 0, np.max(y_arco) - 200])(arch)
-        #arch = multmatrix(m=rotation(180, 'z'))(arch)
+            # define arch
+            arch = union()
+            x_arco = np.linspace(-2200/2, 2200/2, 50)
+            y_arco = 4/2300*x_arco**2
+            arch_struct = color([1, 0, 0])(arco(x_arco, y_arco, 30))
+            arch_struct = multmatrix(m=rotation(-90, 'y'))(arch_struct)
+            arch_struct = multmatrix(m=rotation(-90, 'x'))(arch_struct)
+            arch.add(arch_struct)
 
-        # append camera to arch
+            arch = translate([0, 0, np.max(y_arco) - 200])(arch)
 
-        cam_struct = cube([400, 400, 190], center=True)
+            # append camera to arch
+            camera_frame = cube([400, 400, 190], center=True)
 
-        if sim_to_real:
-            camera_display = multmatrix(m=rotation(90, 'z'))(camera_display)
-            camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
+            if sim_to_real:
+                camera_display = multmatrix(m=rotation(90, 'z'))(camera_display)
+                camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
 
-        # check for arrows in reference frame
-        cam_struct = cam_struct + camera_display
+            # check for arrows in reference frame
+            camera_frame = camera_frame + camera_display
 
-        if ref_camera:
-            arrow_camera = ref_arrow_2d(500, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0))
-            arrow_camera = multmatrix(m=rotation(180, 'x'))(arrow_camera)
-            cam_struct = cam_struct + arrow_camera
+            if ref_camera:
+                arrow_camera = ref_arrow_2d(500, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0))
+                arrow_camera = multmatrix(m=rotation(180, 'x'))(arrow_camera)
+                camera_frame = camera_frame + arrow_camera
 
-        arch.add(cam_struct)
+            # ADD camera_frame and camera display to arch structure
+            arch.add(camera_frame)
 
-        # put together arch and mirror plane
-        telescope_struct.add(arch)
-        telescope_struct.add(mirror_plane)
-        telescope_struct = translate([0, 0, 450])(telescope_struct)
+            # put together arch and mirror plane
+            telescope_struct.add(arch)
+            telescope_struct.add(mirror_plane)
+            #telescope_struct = translate([0, 0, 450])(telescope_struct)
 
-    elif tel_name == 'MST':
-        radius = 600
-        height = 1800
-        ratio_cam = 2
-        mirror_plane = mirror_plane_creator(tel_type=tel_name, radius=radius)
-        telescope_struct.add(mirror_plane)
+        elif tel_type == 'MST':
+            radius = 600
+            height = 1800
+            ratio_cam = 2
+            mirror_plane = mirror_plane_creator(tel_type=tel_type, radius=radius)
+            telescope_struct.add(mirror_plane)
 
-        # add the long spiders to the structure
-        structure = struct_spider(height, radius, radius/ratio_cam)
+            # add the long spiders to the structure
+            structure = struct_spider(height, radius, radius/ratio_cam)
 
-        # create camera structure with ref arrow and overplot the event
-        side_cam = 2 * (radius/ratio_cam) / np.sqrt(2)
-        camera_frame = cube([side_cam, side_cam, 100], center=True)
+            # create camera structure with ref arrow and overplot the event
+            side_cam = 2 * (radius/ratio_cam) / np.sqrt(2)
+            camera_frame = cube([side_cam, side_cam, 100], center=True)
+            if sim_to_real:
+                camera_display = multmatrix(m=rotation(90, 'z'))(camera_display)
+                camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
+            camera_frame = camera_frame + camera_display
 
-        camera_display = multmatrix(m=rotation(-90, 'z'))(camera_display)
-        camera_display = translate([0, 0, -60])(camera_display)
-        camera_display = multmatrix(m=rotation(180, 'x'))(camera_display)
-        camera_frame = camera_frame + camera_display
+            # check for arrows in reference frame
+            if ref_camera:
+                arrow_camera = ref_arrow_2d(500, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0))
+                arrow_camera = multmatrix(m=rotation(180, 'x'))(arrow_camera)
+                camera_frame = camera_frame + arrow_camera
 
-        # check for arrows in reference frame
-        if ref_camera:
-            camera_frame = camera_frame + ref_arrow_2d(400, label={'x': "x_cam", 'y': "y_cam"}, origin=(0, 0), inverted=True)
+            camera_frame = translate([0, 0, 110])(camera_frame)
 
-        # rotate camera in order to have x and y in the correct position (y pointing up and x pointing right)
-        camera_frame = multmatrix(m=rotation(-90, 'z'))(camera_frame)
-        # raise to same level as mirror plane
-        camera_frame = translate([0, 0, 110])(camera_frame)
+            # raise to top of telescope, minus 30 cm in order to look nicer
+            camera_frame = translate([0, 0, height - 30])(camera_frame)
+            structure = structure + camera_frame
 
-        # raise to top of telescope - some in order to look nicer
-        camera_frame = translate([0, 0, height - 30])(camera_frame)
-        structure = structure + camera_frame
+            # add structure, camera frame and camera on the telescope structure
+            telescope_struct.add(structure)
+            #telescope_struct = translate([0, 0, -150])(telescope_struct)
 
-        # add structure, camera frame and camera on the telescope structure
-        telescope_struct.add(structure)
-        telescope_struct = translate([0, 0, -150])(telescope_struct)
+        elif tel_type == 'SST-1M':
+            # TODO: CREATE MODEL FOR SST 1-M: re-use the MST
+            print("sst")
+    elif camera_name in SC_list:
+        if tel_type == 'MST-SCT':
+            print("MST-SCT")
+        elif tel_type == 'SST:ASTRI':
+            print("SST:ASTRI")
+        elif tel_type == 'SST-GCT':
+            print("SST-GCT")
+    else:
+        print("NO tel_name FOUND")
+        sys.exit()
 
     # rotate to pointing. First move in ALTITUDE and then in AZIMUTH
     zen = 90 - pointing['alt'].value
@@ -201,7 +220,7 @@ def telescope(tel_name, camera_display_bool, pointing, origin, tel_num='0', ref_
     telescope_struct = multmatrix(m=rotation(-az, 'z'))(telescope_struct)
 
     # ADD TELESCOPE ID
-    print(tel_num, tel_name)
+    print(tel_num, tel_type)
     tel_number = color(color_trig)(linear_extrude(100)(text(text=str(tel_num), size=10000, spacing=0.1)))
     telescope_struct = translate(list(origin))(telescope_struct)
     telescope_struct = telescope_struct + translate((origin[0]+700, origin[1]+700, 0))(tel_number)
