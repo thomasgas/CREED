@@ -14,6 +14,7 @@ import astropy.units as u
 
 from camera_event import draw_camera
 from utilities import ref_arrow_3d
+from utilities import grid_plane
 
 from telescope_structure import telescope
 from telescope_structure import mirror_plane_creator
@@ -40,6 +41,7 @@ def load_calibrate():
     # event_number = 5   # 3 LST triggered
     # event_number = 1   # MST triggered
     event_number = 26   # 4 LST triggered, with overlap
+    #event_number = 9
 
     event = seeker[event_number]
 
@@ -64,6 +66,7 @@ def telescope_camera_event(event):
     :return: return
     """
     itel = list(event.r0.tels_with_data)
+    print("id_telescopes:", itel)
     subinfo = event.inst.subarray
     sub_arr_trig = event.inst.subarray.select_subarray('sub_trig', itel).to_table()
 
@@ -72,28 +75,31 @@ def telescope_camera_event(event):
     z_tel_trig = sub_arr_trig['tel_pos_z'].to('cm').value
 
     label_tel = sub_arr_trig['tel_id']
-    tel_names = sub_arr_trig['tel_type']
+    tel_names = sub_arr_trig['tel_description']
 
     point_dir = {'alt': event.mcheader.run_array_direction[1].to('deg'), 'az': event.mcheader.run_array_direction[0].to('deg')}
 
     array = union()
     index = 0
-    itel = [7]
+    #itel = [3]
 
     sub_arr_trig.add_index('tel_id')
 
     for tel_id in itel:
         index = sub_arr_trig.loc_indices[tel_id]
-        if subinfo.tel[tel_id].camera.cam_id == 'FlashCam':
+        if subinfo.tel[tel_id].camera.cam_id in ['FlashCam']:
             continue
         print('-------------------------')
         print("tel_id processed: ", tel_id)
         tel_name = tel_names[index]
         camera_display = draw_camera(event=event, itel=tel_id, subarray=subinfo, scale_cam=1.6, tail_cut_bool=True)  #, ref_axis=True)
         origin = (x_tel_trig[index], y_tel_trig[index], z_tel_trig[index])
-        tel_struct = telescope(tel_name=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False, sim_to_real = True)
+        tel_struct = telescope(tel_description=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False, sim_to_real = True)
 
         array.add(tel_struct)
+
+    array.add(grid_plane())
+
     return array
 
 
@@ -112,7 +118,10 @@ def main():
     # select LST telescope with ID=5.
     # event, itel, subinfo = load_calibrate(2)
     event = load_calibrate()
-    array = telescope_camera_event(event=event)
+    array = union()
+    array.add(telescope_camera_event(event=event))
+
+    array.add(grid_plane(grid_unit=5000, count=20, line_weight=100, plane='xy'))
 
     # add MC core x and y
     cross = color([1, 0, 0])(text(text="+", size=1000))
@@ -122,6 +131,8 @@ def main():
     # # add ref_frame
     ref_arr = ref_arrow_3d(1000, origin=(1000, 1000, 0), label={'x': "x_gnd = EAST", 'y': "y_gnd = NORTH", 'z': "z_gnd"})
     array = array + ref_arr
+
+
 
     file_out = 'basic_geometry.scad'
     scad_render_to_file(array, file_out)
