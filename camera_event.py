@@ -13,8 +13,10 @@ cmap = plt.get_cmap("viridis")
 tail_cut = {"LSTCam": (8, 16),
             "NectarCam": (7, 14),
             "FlashCam": (7, 14),
-            "CHEC": (3, 6)}
-
+            "SCTCam":(5, 10),
+            "CHEC": (3, 6),
+            "DigiCam": (3, 6),
+            "ASTRICam": (5, 10)}
 
 def hexagon(center, radius, sides):
     """
@@ -75,8 +77,8 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,
 
     if tail_cut_bool:
         # Perform tailcut cleaning on image
-        pic_th = tail_cut[camera.cam_id][0]
-        bound_th = tail_cut[camera.cam_id][1]
+        pic_th = tail_cut[camera.cam_id][1]
+        bound_th = tail_cut[camera.cam_id][0]
         image_cal = event.dl1.tel[itel].image[0]
         mask_tail = tailcuts_clean(camera, image_cal, picture_thresh=pic_th, boundary_thresh=bound_th,
                                    min_number_picture_neighbors=1)
