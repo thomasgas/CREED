@@ -13,10 +13,11 @@ cmap = plt.get_cmap("viridis")
 tail_cut = {"LSTCam": (8, 16),
             "NectarCam": (7, 14),
             "FlashCam": (7, 14),
-            "SCTCam":(5, 10),
+            "SCTCam": (5, 10),
             "CHEC": (3, 6),
             "DigiCam": (3, 6),
             "ASTRICam": (5, 10)}
+
 
 def hexagon(center, radius, sides):
     """

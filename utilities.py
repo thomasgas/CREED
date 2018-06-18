@@ -7,30 +7,30 @@ def grid_plane(grid_unit=12, count=10, line_weight=0.1, plane='xz'):
 
     # Draws a grid of thin lines in the specified plane.  Helpful for
     # reference during debugging.
-    l = count * grid_unit
+    elle = count * grid_unit
     t = union()
     t.set_modifier('background')
     for i in range(-count // 2, count // 2 + 1):
         if 'xz' in plane:
             # xz-plane
-            h = up(i * grid_unit)(cube([l, line_weight, line_weight], center=True))
-            v = right(i * grid_unit)(cube([line_weight, line_weight, l], center=True))
+            h = up(i * grid_unit)(cube([elle, line_weight, line_weight], center=True))
+            v = right(i * grid_unit)(cube([line_weight, line_weight, elle], center=True))
             t.add([h, v])
 
         # xy plane
         if 'xy' in plane:
-            h = forward(i * grid_unit)(cube([l, line_weight, line_weight], center=True))
-            v = right(i * grid_unit)(cube([line_weight, l, line_weight], center=True))
+            h = forward(i * grid_unit)(cube([elle, line_weight, line_weight], center=True))
+            v = right(i * grid_unit)(cube([line_weight, elle, line_weight], center=True))
             t.add([h, v])
 
         # yz plane
         if 'yz' in plane:
-            h = up(i * grid_unit)(cube([line_weight, l, line_weight], center=True))
-            v = forward(i * grid_unit)(cube([line_weight, line_weight, l], center=True))
-
+            h = up(i * grid_unit)(cube([line_weight, elle, line_weight], center=True))
+            v = forward(i * grid_unit)(cube([line_weight, line_weight, elle], center=True))
             t.add([h, v])
 
     return t
+
 
 def rotation(angle, axis):
     """
@@ -106,10 +106,11 @@ def ref_arrow_3d(arr_length, origin, label, ref_rotation=(0, 0, 0)):
 def ref_arrow_2d(length, origin, label, ref_rotation=(0, 0), inverted = False):
     """
     Create 3-axis ref frame, with color for x,y
-    :param length: length of arrox
+    :param length: length of arrow
+    :param label. dictionary of labels for the 2 axis: {'x': label_x, 'y': label_y}
     :param origin: set origin of arrows. (x, y)
     :param ref_rotation: tuple for rotation
-    :return:
+    :return: arrow with right text rotation.
     """
     ref_frame = union()
     if inverted:

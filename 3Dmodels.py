@@ -41,7 +41,7 @@ def load_calibrate():
     # event_number = 5   # 3 LST triggered
     # event_number = 1   # MST triggered
     event_number = 26   # 4 LST triggered, with overlap
-    #event_number = 9
+    # event_number = 9
 
     event = seeker[event_number]
 
@@ -63,7 +63,7 @@ def telescope_camera_event(event):
         - position every telescope on its right position on ground
 
     :param event: event selected from simtel file
-    :return: return
+    :return: return the array to be rendered
     """
     itel = list(event.r0.tels_with_data)
     print("id_telescopes:", itel)
@@ -80,8 +80,7 @@ def telescope_camera_event(event):
     point_dir = {'alt': event.mcheader.run_array_direction[1].to('deg'), 'az': event.mcheader.run_array_direction[0].to('deg')}
 
     array = union()
-    index = 0
-    #itel = [3]
+    # itel = [3]
 
     sub_arr_trig.add_index('tel_id')
 
@@ -95,9 +94,7 @@ def telescope_camera_event(event):
         camera_display = draw_camera(event=event, itel=tel_id, subarray=subinfo, scale_cam=1.6, tail_cut_bool=True)  #, ref_axis=True)
         origin = (x_tel_trig[index], y_tel_trig[index], z_tel_trig[index])
         tel_struct = telescope(tel_description=tel_name, camera_display_bool=camera_display, pointing=point_dir, origin=origin, tel_num=label_tel[index], ref_camera=True, ref_tel=False, sim_to_real = True)
-
         array.add(tel_struct)
-
     array.add(grid_plane())
 
     return array
@@ -113,10 +110,8 @@ def main():
         - tel id (w/o data_after_cleaning: Red (Y) or Green (N))
     - add MC cross on ground
     - add ground ref frame
-    :return: the full array
+    :return: the full array plus the MC cross on ground and reference frame + grid for xy-plane
     """
-    # select LST telescope with ID=5.
-    # event, itel, subinfo = load_calibrate(2)
     event = load_calibrate()
     array = union()
     array.add(telescope_camera_event(event=event))
@@ -131,8 +126,6 @@ def main():
     # # add ref_frame
     ref_arr = ref_arrow_3d(1000, origin=(1000, 1000, 0), label={'x': "x_gnd = EAST", 'y': "y_gnd = NORTH", 'z': "z_gnd"})
     array = array + ref_arr
-
-
 
     file_out = 'basic_geometry.scad'
     scad_render_to_file(array, file_out)

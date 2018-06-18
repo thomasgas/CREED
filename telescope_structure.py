@@ -1,13 +1,11 @@
 from solid.utils import translate, rotate, union, intersection, hole, multmatrix, difference, linear_extrude
 from solid.utils import cylinder, color, polygon, circle, sphere, cube, text
-from utilities import ref_arrow_3d
 from utilities import ref_arrow_2d
 from utilities import length
 from utilities import rotation
 import numpy as np
 import sys
 
-import astropy.units as u
 
 def arco(x, y, radius):
     """
@@ -19,8 +17,6 @@ def arco(x, y, radius):
     :param radius: dimension cylinder
     :return: curve
     """
-    # x = list(x)
-    # y = list(y)
     arco_sum = union()
     for i in range(x.size - 1):
         begin = (x[i], y[i])
@@ -163,7 +159,7 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
             # put together arch and mirror plane
             telescope_struct.add(arch)
             telescope_struct.add(mirror_plane)
-            #telescope_struct = translate([0, 0, 450])(telescope_struct)
+            # telescope_struct = translate([0, 0, 450])(telescope_struct)
 
         elif tel_type == 'MST':
             radius = 600
@@ -197,7 +193,7 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
 
             # add structure, camera frame and camera on the telescope structure
             telescope_struct.add(structure)
-            #telescope_struct = translate([0, 0, -150])(telescope_struct)
+            # telescope_struct = translate([0, 0, -150])(telescope_struct)
 
         elif tel_type == 'SST-1M':
             # TODO: CREATE MODEL FOR SST 1-M: re-use the MST
@@ -224,6 +220,5 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
     tel_number = color(color_trig)(linear_extrude(100)(text(text=str(tel_num), size=10000, spacing=0.1)))
     telescope_struct = translate(list(origin))(telescope_struct)
     telescope_struct = telescope_struct + translate((origin[0]+700, origin[1]+700, 0))(tel_number)
-
 
     return telescope_struct
