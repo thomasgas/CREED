@@ -1,35 +1,10 @@
-from solid.utils import translate, rotate, union, intersection, hole, multmatrix, difference, linear_extrude
+from solid.utils import translate, rotate, union, intersection, multmatrix, difference, linear_extrude
 from solid.utils import cylinder, color, polygon, circle, sphere, cube, text
-from utilities import ref_arrow_2d
+from utilities import ref_arrow_2d, arco
 from utilities import length
 from utilities import rotation
 import numpy as np
 import sys
-
-
-def arco(x, y, radius):
-    """
-    Create curve from set of point. Each point is connected with a cylinder
-    The curve must be 2D, because I want to perform only rotations along one axis.
-    Connect P(x[i],y[i]) and P(x[i+1], y[y+1])
-    :param x: np.array with the x points
-    :param y: np.array with the "heights"
-    :param radius: dimension cylinder
-    :return: curve
-    """
-    arco_sum = union()
-    for i in range(x.size - 1):
-        begin = (x[i], y[i])
-        end = (x[i + 1], y[i + 1])
-        angle = np.rad2deg(np.arctan((y[i] - y[i+1])/(x[i] - x[i+1])))
-
-        heigth = length(end, begin)
-        new_cylinder = multmatrix(m=rotation(90, 'y'))(cylinder(h=heigth, r=radius))
-        new_cylinder = multmatrix(m=rotation(angle, 'z'))(new_cylinder)
-        new_cylinder = translate(list(begin))(new_cylinder)
-        arco_sum.add(new_cylinder)
-    return arco_sum
-
 
 def struct_spider(height, radius_square_low, radius_square_top):
     """
