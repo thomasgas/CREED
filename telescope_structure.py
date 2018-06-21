@@ -209,16 +209,22 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
         print("NO tel_name FOUND")
         sys.exit()
 
+
+    telescope_struct = multmatrix(m=rotation(-90, 'z'))(telescope_struct)
+
+
     # rotate to pointing. First move in ALTITUDE and then in AZIMUTH
     zen = 90 - pointing['alt'].value
     az = pointing['az'].value
-    telescope_struct = multmatrix(m=rotation(-zen, 'x'))(telescope_struct)
+    telescope_struct = multmatrix(m=rotation(zen, 'y'))(telescope_struct)
     telescope_struct = multmatrix(m=rotation(-az, 'z'))(telescope_struct)
 
     # ADD TELESCOPE ID
     print(tel_num, tel_type)
     tel_number = color(color_trig)(linear_extrude(100)(text(text=str(tel_num), size=10000, spacing=0.1)))
+    tel_number = rotate((0, 0, az+90))(tel_number)
+    tel_number = translate((origin[0]-700, origin[1]-700, 0))(tel_number)
     telescope_struct = translate(list(origin))(telescope_struct)
-    telescope_struct = telescope_struct + translate((origin[0]+700, origin[1]+700, 0))(tel_number)
+    telescope_struct = telescope_struct + tel_number
 
     return telescope_struct

@@ -1,5 +1,5 @@
 from solid import scad_render_to_file
-from solid.utils import translate, rotate, union, intersection, hole, multmatrix, difference
+from solid.utils import translate, rotate, union, intersection, hole, multmatrix, difference, linear_extrude
 from solid.utils import cylinder, color, polygon, circle, sphere, cube, text
 import numpy as np
 
@@ -8,16 +8,15 @@ from ctapipe.calib.camera.dl0 import CameraDL0Reducer
 from ctapipe.calib.camera.dl1 import CameraDL1Calibrator
 from ctapipe.calib.camera.r1 import HESSIOR1Calibrator
 from ctapipe.io import EventSeeker
-#from ctapipe.coordinates import HorizonFrame
+from ctapipe.coordinates import HorizonFrame, TiltedGroundFrame, GroundFrame, NominalFrame, CameraFrame, TelescopeFrame
 
 import astropy.units as u
 
 from camera_event import draw_camera
 from utilities import ref_arrow_3d
-from utilities import grid_plane
+from utilities import grid_plane, ref_arrow_2d
 
 from telescope_structure import telescope
-from telescope_structure import mirror_plane_creator
 
 
 def load_calibrate():
@@ -31,7 +30,7 @@ def load_calibrate():
                     417]
 
     source = event_source("/home/thomas/Programs/astro/CTAPIPE_DAN/gamma_20deg_180deg_run10651___cta-prod3-merged_desert-2150m-Paranal-subarray-3.simtel-dst0.gz")
-
+    # source = event_source("/home/thomas/Programs/astro/Alice/gamma_20deg_180deg_run1___cta-prod3-demo-2147m-LaPalma-baseline.simtel.gz")
     # source = event_source(
     #    "/home/thomas/Programs/astro/CTAPIPE_DAN/gamma_20deg_180deg_run10651___cta-prod3-merged_desert-2150m-Paranal-subarray-3.simtel-dst0.gz",
     #    allowed_tels=allowed_tels)
@@ -80,7 +79,7 @@ def telescope_camera_event(event):
     point_dir = {'alt': event.mcheader.run_array_direction[1].to('deg'), 'az': event.mcheader.run_array_direction[0].to('deg')}
 
     array = union()
-    # itel = [3]
+    itel = [3]
 
     sub_arr_trig.add_index('tel_id')
 
@@ -100,6 +99,90 @@ def telescope_camera_event(event):
     return array
 
 
+def tilted_grid(event, tel_pos = False):
+    """
+    Return the telescopes positions in the TiltedGroundFrame and plot them according to azimuth and zenith of simulation
+    :param event: event selected from simtel
+    :param tel_pos: (bool) If True, plot the telescopes as spheres
+    :return:
+    """
+    alt = event.mcheader.run_array_direction[1]
+    az = event.mcheader.run_array_direction[0]
+
+    array_pointing = HorizonFrame(alt=alt, az=az)
+    ground_coordinates = GroundFrame(x=event.inst.subarray.tel_coords.x,
+                                     y=event.inst.subarray.tel_coords.y,
+                                     z=event.inst.subarray.tel_coords.z,  # *0+15.0*u.m,
+                                     pointing_direction=array_pointing)
+
+    tilted = ground_coordinates.transform_to("TiltedGroundFrame")
+
+    grid_unit = 20000  # in centimeters
+    tilted_system = union()
+
+
+    # ADD TELESCOPES AS SPHERES
+    if tel_pos:
+        # for i in range(tilted.x.size):
+        for i in range(50):
+            coords = [100*tilted.x[i].value, 100*tilted.y[i].value]
+            position = translate(coords)(color([1, 0, 0])(sphere(r=800)))
+            tilted_system.add(position)
+
+    # add GRID
+    grid_tilted = grid_plane(grid_unit=grid_unit,
+                             count=2*int(100*np.max(np.abs(ground_coordinates.x.value))/grid_unit),
+                             line_weight=200,
+                             plane='xy')
+
+    grid_tilted = color([1, 0, 0, 0.5])(grid_tilted)
+    grid_tilted = grid_tilted + ref_arrow_2d(8000, label={'x': "x_tilted", 'y': "y_tilted"}, origin=(0, 0))
+    tilted_system = rotate([0, 90-alt.to('deg').value, az.to('deg').value])(tilted_system)
+    tilted_system.add(grid_tilted)
+
+    return tilted_system
+
+
+def ground_grid(event, tel_pos=False):
+    """
+    Return the telescopes positions in the GroundFrame and plot on ground
+    :param event: input event selected from simtel
+    :param tel_pos: (bool) if True, plot the telescopes as spheres
+    :return:
+    """
+    alt = event.mcheader.run_array_direction[1]
+    az = event.mcheader.run_array_direction[0]/1.5
+    array_pointing = HorizonFrame(alt=alt, az=az)
+
+    ground_coordinates = GroundFrame(x=event.inst.subarray.tel_coords.x,
+                                     y=event.inst.subarray.tel_coords.y,
+                                     z=event.inst.subarray.tel_coords.z,
+                                     pointing_direction=array_pointing)
+
+    grid_unit = 20000  # in centimeters
+
+    ground_system = union()
+    if tel_pos:
+        # for i in range(ground_coordinates.x.size):
+        for i in range(50):
+            coords = [100*ground_coordinates.x[i].value, 100*ground_coordinates.y[i].value, 100*ground_coordinates.z[i].value]
+            position = translate(coords)(color([0, 0, 1])(sphere(r=800)))
+            ground_system.add(position)
+
+    grid = grid_plane(grid_unit=grid_unit,
+                      count=2 * int(100 * np.max(np.abs(ground_coordinates.x.value)) / grid_unit),
+                      line_weight=200,
+                      plane='xy')
+
+    grid = color([0, 0, 1, 0.5])(grid)
+    ground_system.add(grid)
+
+    # SYSTEM + ARROW
+    ref_arr = ref_arrow_3d(8000, origin=(1000, 1000, 0), label={'x': "x_gnd = NORTH", 'y': "y_gnd = WEST", 'z': "z_gnd"})
+    ground_system = ground_system + ref_arr
+    return ground_system
+
+
 def main():
     """
     Main function to
@@ -112,20 +195,17 @@ def main():
     - add ground ref frame
     :return: the full array plus the MC cross on ground and reference frame + grid for xy-plane
     """
-    event = load_calibrate()
     array = union()
+    event = load_calibrate()
     array.add(telescope_camera_event(event=event))
-
-    array.add(grid_plane(grid_unit=5000, count=20, line_weight=100, plane='xy'))
+    array.add(tilted_grid(event=event, tel_pos=True))
+    array.add(ground_grid(event=event, tel_pos=True))
 
     # add MC core x and y
-    cross = color([1, 0, 0])(text(text="+", size=1000))
-    cross = cross + color([1, 0, 0])(translate([800, 0, 0])(text(text="MC", size=500)))
+    cross = text(text="+", size=5000)
+    cross = cross + translate([1000, 1000, 0])(text(text="MC", size=1000))
+    cross = color([1, 0, 0])(linear_extrude(200)(cross))
     array = array + translate([event.mc.core_x.to('cm').value, event.mc.core_y.to('cm').value, 0])(cross)
-
-    # # add ref_frame
-    ref_arr = ref_arrow_3d(1000, origin=(1000, 1000, 0), label={'x': "x_gnd = EAST", 'y': "y_gnd = NORTH", 'z': "z_gnd"})
-    array = array + ref_arr
 
     file_out = 'basic_geometry.scad'
     scad_render_to_file(array, file_out)
