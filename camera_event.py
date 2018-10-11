@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 cmap = plt.get_cmap("viridis")
 
-tail_cut = {"LSTCam": (8, 16),
+tail_cut = {"LSTCam": (5, 10),
             "NectarCam": (7, 14),
             "FlashCam": (7, 14),
             "SCTCam": (5, 10),
@@ -47,10 +47,10 @@ def circle_trans(center, radius, height):
     :return: the translated circle
     """
     (center_x, center_y) = center
-    return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=8))
+    return translate([center_x, center_y])(cylinder(r=radius, h=height,  segments=6))
 
 
-def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,ref_axis=True):
+def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):
     """
     Draw camera, either with or without an event. Take info from a simtel file.
     Make camera a list with the second element a boolean which knows if the camera has data after the cleaning.
@@ -72,16 +72,21 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,
 
     x_pix_pos = 100 * camera.pix_x.value
     y_pix_pos = 100 * camera.pix_y.value
-    side = 1.05*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
+
+    # calculate pixel size and expand it a bit (1.1 scale)
+    side = 1.1*np.sqrt(((x_pix_pos[0] - x_pix_pos[1]) ** 2 + (y_pix_pos[0] - y_pix_pos[1]) ** 2)) / 2
 
     data_after_cleaning = False
 
+    # Perform tailcut cleaning on image
+    pic_th = tail_cut[camera.cam_id][0]
+    bound_th = tail_cut[camera.cam_id][1]
+    image_cal = event.dl1.tel[itel].image[0]
+
     if tail_cut_bool:
-        # Perform tailcut cleaning on image
-        pic_th = tail_cut[camera.cam_id][1]
-        bound_th = tail_cut[camera.cam_id][0]
-        image_cal = event.dl1.tel[itel].image[0]
-        mask_tail = tailcuts_clean(camera, image_cal, picture_thresh=pic_th, boundary_thresh=bound_th,
+        mask_tail = tailcuts_clean(camera, image_cal,
+                                   picture_thresh=pic_th,
+                                   boundary_thresh=bound_th,
                                    min_number_picture_neighbors=1)
 
         max_col = np.max(image_cal*mask_tail)
@@ -89,17 +94,21 @@ def draw_camera(event, itel, subarray, scale_cam=1.0, tail_cut_bool=False):  # ,
         # set boolean for trigger display on ground
         data_after_cleaning = np.sum(mask_tail) == 0
 
-        for i in range(x_pix_pos.size):
-            # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
-            colore = list(cmap(image_cal[i] * mask_tail[i] / max_col))
-            center = (x_pix_pos[i]*scale_cam, y_pix_pos[i]*scale_cam)
-            camera_display.add(color(colore)(circle_trans(center=center, radius=side*scale_cam, height=cam_height)))
     else:
-        for i in range(x_pix_pos.size):
-            # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
-            colore = [0, 0, 1]
-            center = (x_pix_pos[i]*scale_cam, y_pix_pos[i]*scale_cam)
-            camera_display.add(color(colore)(circle_trans(center=center, radius=side*scale_cam, height=cam_height)))
+        mask_tail = np.full(x_pix_pos.size, True)
+        max_col = np.max(image_cal)
+
+    # for the color plotting of the untriggered telescope
+    try:
+        image_cal = image_cal/max_col
+    except RuntimeWarning:
+        pass
+
+    for i in range(x_pix_pos.size):
+        # camera_display.add((hexagon((x_pix_pos[i],y_pix_pos[i]), side, 6)))
+        colore = list(cmap(image_cal[i] * mask_tail[i]))
+        center = (x_pix_pos[i] * scale_cam, y_pix_pos[i] * scale_cam)
+        camera_display.add(color(colore)(circle_trans(center=center, radius=side * scale_cam, height=cam_height)))
 
     camera_display = camera_display.add(translate([0, 0, cam_height/2])(ref_arrow_2d(400, label={'x': "x_sim", 'y': "y_sim"}, origin=(0, 0))))
     camera_display = multmatrix(m=rotation(180, 'y'))(camera_display)

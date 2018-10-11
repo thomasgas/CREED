@@ -13,7 +13,6 @@ def struct_spider(height, radius_square_low, radius_square_top):
     :param radius_square_low: radius in the lower part (mirror plane)
     :param radius_square_top: radius in the upper part (camera plane)
     :return: 4 spider and camera structure
-    TODO: how to create 2-mirror telescope structure?
     """
     structure = union()
     sides = 4
@@ -173,7 +172,10 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
         elif tel_type == 'SST-1M':
             # TODO: CREATE MODEL FOR SST 1-M: re-use the MST
             print("sst")
+            pass
+
     elif camera_name in SC_list:
+        pass
         if tel_type == 'MST-SCT':
             print("MST-SCT")
         elif tel_type == 'SST:ASTRI':
@@ -184,9 +186,7 @@ def telescope(tel_description, camera_display_bool, pointing, origin, tel_num='0
         print("NO tel_name FOUND")
         sys.exit()
 
-
     telescope_struct = multmatrix(m=rotation(-90, 'z'))(telescope_struct)
-
 
     # rotate to pointing. First move in ALTITUDE and then in AZIMUTH
     zen = 90 - pointing['alt'].value
