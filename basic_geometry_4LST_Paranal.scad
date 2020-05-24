@@ -39193,16 +39193,15 @@ from telescope_structure import telescope
 import copy
 
 
-def load_calibrate():
+def load_calibrate(filename):
     # LOAD AND CALIBRATE
 
-    pwd = "/home/thomas/Programs/astro/CTAPIPE_DAN/"
+    # pwd = "/home/thomas/Programs/astro/CTAPIPE_DAN/"
     # filename = 'gamma_20deg_0deg_run100___cta-prod3-lapalma3-2147m-LaPalma_cone10.simtel.gz'
-    filename = 'gamma_20deg_0deg_run100___cta-prod3_desert-2150m-Paranal-merged.simtel.gz'
+    # filename = 'gamma_20deg_0deg_run100___cta-prod3_desert-2150m-Paranal-merged.simtel.gz'
     # filename = 'gamma_20deg_0deg_run118___cta-prod3_desert-2150m-Paranal-merged_cone10.simtel.gz'
     # filename = 'gamma_20deg_180deg_run11___cta-prod3_desert-2150m-Paranal-merged_cone10.simtel.gz'
 
-    filename = pwd + filename
     # layout = np.loadtxt(pwd+'CTA.prod3Sb.3HB9-FG.lis', usecols=0, dtype=int)
     if "Paranal" in filename:
         layout = [4, 5, 6, 11]
@@ -39232,7 +39231,7 @@ def load_calibrate():
     for event in events:
         cal.calibrate(event)
 
-    # Find "big" event
+    # Find "big" event (piece of code from T.V. notebook ...thanks :D )
     events_amplitude = []
     for event in events:
         event_amplitude = 0
@@ -39243,9 +39242,7 @@ def load_calibrate():
     events_amplitude = np.array(events_amplitude)
 
     mm = events_amplitude.argmax()
-
-    print(mm)
-
+    print("event: {0}".format(mm))
     event = events[mm]
 
     return event
@@ -39328,7 +39325,7 @@ def mc_details(event):
     return cross
 
 
-def main():
+def main(filename):
     """
     Main function to
     - load and calibrate the event from simtel file
@@ -39341,7 +39338,7 @@ def main():
     :return: the full array plus the MC cross on ground and reference frame + grid for xy-plane
     """
     array = union()
-    event = load_calibrate()
+    event = load_calibrate(filename)
     array.add(telescope_camera_event(event=event))
     array = array + mc_details(event=event)
 
@@ -39352,14 +39349,20 @@ def main():
 
     array = array + ref_arr
 
-    file_out = 'basic_geometry_4LST_Paranal.scad'
+    if "Paranal" in filename:
+        site = "Paranal"
+    elif "palma" in filename:
+        site = "LaPalma"
+    else:
+        site = "nosite"
+
+    file_out = 'basic_geometry_4LST_' + site + '.scad'
     scad_render_to_file(array, file_out)
 
 
 if __name__ == '__main__':
     filename = sys.argv[1]
-    print(filename)
-    main()
+    main(filename)
  
  
 ************************************************/
